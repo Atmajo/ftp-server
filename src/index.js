@@ -4,6 +4,7 @@ import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import fs from "fs";
 
 config();
 
@@ -12,6 +13,11 @@ const port = process.env.PORT || 8080;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const uploadsDir = path.resolve(__dirname, "../uploads/images");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
