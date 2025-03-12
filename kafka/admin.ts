@@ -1,4 +1,4 @@
-import { kafka } from "./client";
+import { kafka } from "./client.ts";
 
 async function init() {
   const admin = kafka.admin();

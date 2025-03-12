@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FTP File Manager</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        padding-top: 2rem;
+        background-color: #f8f9fa;
+      }
+      .upload-area {
+        border: 2px dashed #ddd;
+        border-radius: 8px;
+        padding: 3rem;
+        text-align: center;
+        background-color: #fff;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+      .upload-area:hover {
+        border-color: #0d6efd;
+      }
+      .file-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+        background-color: white;
+      }
+      .file-item i {
+        margin-right: 10px;
+        font-size: 1.5rem;
+      }
+      .file-icon {
+        width: 24px;
+        margin-right: 10px;
+      }
+      .breadcrumb {
+        background-color: white;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+      }
+      .folder-item {
+        cursor: pointer;
+      }
+      .progress {
+        display: none;
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <h1 class="mb-4">FTP File Manager</h1>
+
+          <!-- Breadcrumb navigation -->
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb" id="path-breadcrumb">
+              <li class="breadcrumb-item"><a href="#" data-path="">Home</a></li>
+            </ol>
+          </nav>
+
+          <!-- Create directory modal -->
+          <div
+            class="modal fade"
+            id="createDirModal"
+            tabindex="-1"
+            aria-labelledby="createDirModalLabel"
+            aria-hidden="true"
+          >
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="createDirModalLabel">
+                    Create New Directory
+                  </h5>
+                  <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                  ></button>
+                </div>
+                <div class="modal-body">
+                  <div class="mb-3">
+                    <label for="dirName" class="form-label"
+                      >Directory Name</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="dirName"
+                      placeholder="Enter directory name"
+                    />
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    id="createDirBtn"
+                  >
+                    Create
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rename modal -->
+          <div
+            class="modal fade"
+            id="renameModal"
+            tabindex="-1"
+            aria-labelledby="renameModalLabel"
+            aria-hidden="true"
+          >
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="renameModalLabel">Rename Item</h5>
+                  <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                  ></button>
+                </div>
+                <div class="modal-body">
+                  <div class="mb-3">
+                    <label for="newName" class="form-label">New Name</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="newName"
+                      placeholder="Enter new name"
+                    />
+                    <input type="hidden" id="oldPath" />
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                  >
+                    Cancel
+                  </button>
+                  <button type="button" class="btn btn-primary" id="renameBtn">
+                    Rename
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-8">
+          <!-- File listing -->
+          <div class="card mb-4">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <span>Files and Directories</span>
+              <button
+                class="btn btn-primary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#createDirModal"
+              >
+                Create Directory
+              </button>
+            </div>
+            <div class="card-body">
+              <div id="file-list" class="mb-3">
+                <div class="text-center py-5 text-muted">Loading files...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <!-- Upload area -->
+          <div class="card mb-4">
+            <div class="card-header">Upload Files</div>
+            <div class="card-body">
+              <div id="upload-area" class="upload-area">
+                <img
+                  src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/icons/cloud-upload.svg"
+                  alt="Upload"
+                  width="48"
+                  height="48"
+                />
+                <h5 class="mt-3">Drag & Drop Files Here</h5>
+                <p class="text-muted mb-3">or click to select files</p>
+                <input
+                  type="file"
+                  id="file-input"
+                  multiple
+                  style="display: none"
+                />
+                <button
+                  class="btn btn-primary"
+                  onclick="document.getElementById('file-input').click()"
+                >
+                  Choose Files
+                </button>
+              </div>
+              <div class="progress mt-3">
+                <div
+                  id="upload-progress"
+                  class="progress-bar"
+                  role="progressbar"
+                  style="width: 0%"
+                ></div>
+              </div>
+              <div id="upload-status" class="mt-2"></div>
+            </div>
+          </div>
+
+          <!-- Actions panel -->
+          <div class="card">
+            <div class="card-header">Actions</div>
+            <div class="card-body">
+              <div class="d-grid gap-2">
+                <button id="refresh-btn" class="btn btn-outline-secondary">
+                  Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Constants and variables
+      const API_BASE_URL = "/"; // Update this to match your API base URL
+      let currentPath = "";
+      let selectedItem = null;
+
+      // Helper functions
+      function getAuthHeaders() {
+        // This is a simple implementation. In production, use a more secure approach.
+        const username =
+          localStorage.getItem("ftpUsername") || prompt("Enter username:");
+        const password =
+          localStorage.getItem("ftpPassword") || prompt("Enter password:");
+
+        if (username && password) {
+          localStorage.setItem("ftpUsername", username);
+          localStorage.setItem("ftpPassword", password);
+          return {
+            Authorization: "Basic " + btoa(username + ":" + password),
+          };
+        }
+        return {};
+      }
+
+      async function fetchFiles(path = "") {
+        try {
+          const response = await fetch(`${API_BASE_URL}list/${path}`, {
+            headers: getAuthHeaders(),
+          });
+
+          if (response.status === 401) {
+            localStorage.removeItem("ftpUsername");
+            localStorage.removeItem("ftpPassword");
+            alert("Authentication failed. Please try again.");
+            return fetchFiles(path);
+          }
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          return data.items || [];
+        } catch (error) {
+          console.error("Error fetching files:", error);
+          return [];
+        }
+      }
+
+      function renderBreadcrumb(path) {
+        const breadcrumb = document.getElementById("path-breadcrumb");
+        breadcrumb.innerHTML =
+          '<li class="breadcrumb-item"><a href="#" data-path="">Home</a></li>';
+
+        if (path) {
+          const segments = path.split("/");
+          let currentPath = "";
+
+          segments.forEach((segment, index) => {
+            currentPath += (index === 0 ? "" : "/") + segment;
+            const isLast = index === segments.length - 1;
+
+            const li = document.createElement("li");
+            li.className = "breadcrumb-item" + (isLast ? " active" : "");
+            if (isLast) {
+              li.setAttribute("aria-current", "page");
+              li.textContent = segment;
+            } else {
+              const a = document.createElement("a");
+              a.href = "#";
+              a.setAttribute("data-path", currentPath);
+              a.textContent = segment;
+              li.appendChild(a);
+            }
+
+            breadcrumb.appendChild(li);
+          });
+        }
+
+        // Add breadcrumb click event
+        breadcrumb.querySelectorAll("a").forEach((link) => {
+          link.addEventListener("click", (e) => {
+            e.preventDefault();
+            navigateTo(e.target.getAttribute("data-path"));
+          });
+        });
+      }
+
+      function renderFileList(files) {
+        const fileList = document.getElementById("file-list");
+
+        if (files.length === 0) {
+          fileList.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <img src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/icons/folder-x.svg" width="48" height="48">
+                        <p class="mt-3">This folder is empty</p>
+                    </div>
+                `;
+          return;
+        }
+
+        fileList.innerHTML = "";
+
+        // Sort directories first, then files
+        files.sort((a, b) => {
+          if (a.isDirectory && !b.isDirectory) return -1;
+          if (!a.isDirectory && b.isDirectory) return 1;
+          return a.name.localeCompare(b.name);
+        });
+
+        files.forEach((item) => {
+          const fileItem = document.createElement("div");
+          fileItem.className = "file-item";
+          if (item.isDirectory) {
+            fileItem.classList.add("folder-item");
+          }
+
+          const icon = item.isDirectory
+            ? "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/icons/folder.svg"
+            : "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/icons/file-earmark.svg";
+
+          fileItem.innerHTML = `
+                    <img src="${icon}" alt="${
+            item.isDirectory ? "Folder" : "File"
+          }" class="file-icon">
+                    <div class="flex-grow-1">${item.name}</div>
+                    <div class="text-muted small me-2">${formatFileSize(
+                      item.size
+                    )}</div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                            ${
+                              item.isDirectory
+                                ? `<li><a class="dropdown-item open-folder" href="#" data-path="${item.path}">Open</a></li>`
+                                : `<li><a class="dropdown-item download-file" href="#" data-path="${item.path}">Download</a></li>`
+                            }
+                            <li><a class="dropdown-item rename-item" href="#" data-path="${
+                              item.path
+                            }">Rename</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item delete-item text-danger" href="#" data-path="${
+                              item.path
+                            }">Delete</a></li>
+                        </ul>
+                    </div>
+                `;
+
+          fileList.appendChild(fileItem);
+
+          // Add click event for folders
+          if (item.isDirectory) {
+            fileItem.addEventListener("dblclick", () => {
+              navigateTo(item.path);
+            });
+
+            // Also add event for the "Open" action
+            fileItem
+              .querySelector(".open-folder")
+              .addEventListener("click", (e) => {
+                e.preventDefault();
+                navigateTo(item.path);
+              });
+          }
+
+          // Add download event for files
+          if (!item.isDirectory) {
+            fileItem
+              .querySelector(".download-file")
+              .addEventListener("click", (e) => {
+                e.preventDefault();
+                window.location.href = `${API_BASE_URL}download/${item.path}`;
+              });
+          }
+
+          // Rename event
+          fileItem
+            .querySelector(".rename-item")
+            .addEventListener("click", (e) => {
+              e.preventDefault();
+              const path = e.target.getAttribute("data-path");
+              const oldName = path.split("/").pop();
+              document.getElementById("newName").value = oldName;
+              document.getElementById("oldPath").value = path;
+              new bootstrap.Modal(
+                document.getElementById("renameModal")
+              ).show();
+            });
+
+          // Delete event
+          fileItem
+            .querySelector(".delete-item")
+            .addEventListener("click", async (e) => {
+              e.preventDefault();
+              const path = e.target.getAttribute("data-path");
+              if (confirm("Are you sure you want to delete this item?")) {
+                await deleteItem(path);
+              }
+            });
+        });
+      }
+
+      function formatFileSize(bytes) {
+        if (bytes === 0) return "0 Bytes";
+        const k = 1024;
+        const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+      }
+
+      async function navigateTo(path) {
+        currentPath = path;
+        renderBreadcrumb(path);
+        const files = await fetchFiles(path);
+        renderFileList(files);
+      }
+
+      async function uploadFiles(files) {
+        const progressBar = document.getElementById("upload-progress");
+        const progressContainer = document.querySelector(".progress");
+        const statusEl = document.getElementById("upload-status");
+
+        progressContainer.style.display = "flex";
+        progressBar.style.width = "0%";
+        statusEl.innerHTML = "Preparing to upload...";
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const formData = new FormData();
+          formData.append("file", file);
+
+          try {
+            statusEl.innerHTML = `Uploading ${i + 1}/${files.length}: ${
+              file.name
+            }`;
+
+            const response = await fetch(
+              `${API_BASE_URL}upload/${currentPath}`,
+              {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: formData,
+                onUploadProgress: (progressEvent) => {
+                  const percentCompleted = Math.round(
+                    (progressEvent.loaded * 100) / progressEvent.total
+                  );
+                  progressBar.style.width = percentCompleted + "%";
+                  progressBar.textContent = percentCompleted + "%";
+                },
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            progressBar.style.width = "100%";
+            progressBar.textContent = "100%";
+          } catch (error) {
+            console.error("Error uploading file:", error);
+            statusEl.innerHTML = `Error uploading ${file.name}: ${error.message}`;
+            progressBar.classList.add("bg-danger");
+            return;
+          }
+        }
+
+        statusEl.innerHTML = `Successfully uploaded ${files.length} files.`;
+        setTimeout(() => {
+          progressContainer.style.display = "none";
+          statusEl.innerHTML = "";
+          navigateTo(currentPath); // Refresh file list
+        }, 2000);
+      }
+
+      async function createDirectory(name) {
+        try {
+          const path = currentPath ? `${currentPath}/${name}` : name;
+          const response = await fetch(`${API_BASE_URL}mkdir/${path}`, {
+            method: "POST",
+            headers: getAuthHeaders(),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          navigateTo(currentPath); // Refresh file list
+        } catch (error) {
+          console.error("Error creating directory:", error);
+          alert("Failed to create directory: " + error.message);
+        }
+      }
+
+      async function renameItem(oldPath, newName) {
+        try {
+          const pathParts = oldPath.split("/");
+          pathParts.pop(); // Remove the old filename
+          const directory = pathParts.join("/");
+          const newPath = directory ? `${directory}/${newName}` : newName;
+
+          const response = await fetch(`${API_BASE_URL}rename`, {
+            method: "PUT",
+            headers: {
+              ...getAuthHeaders(),
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              oldPath,
+              newPath,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          navigateTo(currentPath); // Refresh file list
+        } catch (error) {
+          console.error("Error renaming item:", error);
+          alert("Failed to rename item: " + error.message);
+        }
+      }
+
+      async function deleteItem(path) {
+        try {
+          const response = await fetch(`${API_BASE_URL}delete/${path}`, {
+            method: "DELETE",
+            headers: getAuthHeaders(),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          navigateTo(currentPath); // Refresh file list
+        } catch (error) {
+          console.error("Error deleting item:", error);
+          alert("Failed to delete item: " + error.message);
+        }
+      }
+
+      // Event listeners
+      document.addEventListener("DOMContentLoaded", async () => {
+        // Initial file load
+        await navigateTo("");
+
+        // Drag and drop for upload area
+        const uploadArea = document.getElementById("upload-area");
+
+        uploadArea.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          uploadArea.style.borderColor = "#0d6efd";
+          uploadArea.style.backgroundColor = "#f8f9ff";
+        });
+
+        uploadArea.addEventListener("dragleave", () => {
+          uploadArea.style.borderColor = "#ddd";
+          uploadArea.style.backgroundColor = "#fff";
+        });
+
+        uploadArea.addEventListener("drop", (e) => {
+          e.preventDefault();
+          uploadArea.style.borderColor = "#ddd";
+          uploadArea.style.backgroundColor = "#fff";
+
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            uploadFiles(files);
+          }
+        });
+
+        // File input change
+        document
+          .getElementById("file-input")
+          .addEventListener("change", (e) => {
+            const files = e.target.files;
+            if (files.length > 0) {
+              uploadFiles(files);
+            }
+          });
+
+        // Create directory
+        document
+          .getElementById("createDirBtn")
+          .addEventListener("click", () => {
+            const dirName = document.getElementById("dirName").value.trim();
+            if (dirName) {
+              createDirectory(dirName);
+              document.getElementById("dirName").value = "";
+              bootstrap.Modal.getInstance(
+                document.getElementById("createDirModal")
+              ).hide();
+            } else {
+              alert("Please enter a directory name");
+            }
+          });
+
+        // Rename item
+        document.getElementById("renameBtn").addEventListener("click", () => {
+          const oldPath = document.getElementById("oldPath").value;
+          const newName = document.getElementById("newName").value.trim();
+          if (newName) {
+            renameItem(oldPath, newName);
+            bootstrap.Modal.getInstance(
+              document.getElementById("renameModal")
+            ).hide();
+          } else {
+            alert("Please enter a new name");
+          }
+        });
+
+        // Refresh button
+        document.getElementById("refresh-btn").addEventListener("click", () => {
+          navigateTo(currentPath);
+        });
+      });
+    </script>
+  </body>
+</html>
