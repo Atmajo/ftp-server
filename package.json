@@ -1,0 +1,22 @@
+{
+  "name": "ftp",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "nodemon src/index.ts",
+    "build": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/express": "^5.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "kafkajs": "^2.2.4",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2"
+  }
+}
