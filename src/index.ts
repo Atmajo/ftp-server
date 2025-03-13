@@ -6,6 +6,7 @@ import uploadRouter from "./router/upload-router.ts";
 import listRouter from "./router/list-router.ts";
 import deleteRouter from "./router/delete-router.ts";
 import mkdirRouter from "./router/mkdir-router.ts";
+import renameRouter from "./router/rename-router.ts";
 
 const app = express();
 const port = 3000;
@@ -35,6 +36,7 @@ app.use("/list", listRouter);
 app.use("/upload", uploadRouter);
 app.use("/delete", deleteRouter);
 app.use("/mkdir", mkdirRouter);
+app.use("/rename", renameRouter);
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
